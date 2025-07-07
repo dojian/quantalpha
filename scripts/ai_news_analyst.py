@@ -112,7 +112,7 @@ async def analyze_headlines_async(headlines):
     )
 
     request_payload = {
-        "model": "llama-3",  # Adjust to your available model name
+        "model": "meta-llama/Llama-3.3-70B-Instruct"
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
