@@ -2,34 +2,37 @@ import os
 import logging
 from newsapi import NewsApiClient
 from uagents import Agent, Context, Model
-from huggingface_hub import InferenceClient
 from portfolio_manager import PortfolioManager
 import json
+import aiohttp
 
 # Replace with your NewsAPI key
-NEWS_API_KEY = os.environ["NEWS_API_KEY"]
-HF_GROQ_API_KEY = os.environ["HF_GROQ_API_KEY"]
+NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+GROQ_API_URL = os.environ.get("NEWS_API_KEY")
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
-# Define message models
-class NewsRequest(Model):
-    pass
-
-class NewsResponse(Model):
-    headlines: list
-    analysis: str
+# Define message models    
+class HelloMessage(Model):
+    greeting: str  
     
+class WelcomeMessage(Model):
+    text: str
+    
+class FullReport(Model):
+    text: str
+
 class UserConfirmation(Model):
     decision: str
     target_allocation: dict
     
 # Fetch news function
-def fetch_news(topic: str):
+def fetch_news():
     try:
         newsapi = NewsApiClient(api_key=NEWS_API_KEY)
-        result = newsapi.get_top_headlines(q="finance", language="en", page_size=5)
+        result = newsapi.get_top_headlines(language="en", page_size=5)
 
         if result["status"] != "ok":
             logging.warning(f"NewsAPI returned status: {result['status']}")
@@ -52,11 +55,11 @@ def fetch_news(topic: str):
         logging.error(f"Error fetching news from NewsAPI: {e}")
         return []
 
-async def analyze_headlines_async(headlines: list, assets: list):
+async def analyze_headlines_async(headlines):
     if not headlines:
         return "No headlines to analyze."
 
-    SYSTEM_PROMPT = """
+    system_prompt = """
         You are a financial advisor.
         Your job is to determine whether the user needs to change 
             his asset allocations based on the context of the discussion. 
@@ -94,8 +97,8 @@ async def analyze_headlines_async(headlines: list, assets: list):
         target allocations: {stocks:60%, bonds:20%, crypto:10%, cash:10%}            
     """
     pm = PortfolioManager()
-
-    USER_PROMPT = (
+        
+    user_prompt = (
         "Here are the top headlines for today: " 
         + ", ".join(headlines)
         + "Here are the current asset allocations in my portfolio." 
@@ -104,32 +107,40 @@ async def analyze_headlines_async(headlines: list, assets: list):
         + "Region allocation: " 
         + ", ".join([key + " - " + str(value) for key, value in pm.get_geographic_allocation().items()])
         + "Asset allocation: " 
-        + ", ".join([key + " - " + str(value) for key, value in pm.portfolio.items()])
+        + ", ".join([asset.symbol + " - " + str(asset.allocation) for asset in pm.portfolio.assets])
         + "Based on this information, which changes should I make to my portfolio?"
     )
 
-    client = InferenceClient(
-        provider="groq",
-        api_key=HF_GROQ_API_KEY,
-    )
-    
-    completion = client.chat.completions.create(
-        model="meta-llama/Llama-3.3-70B-Instruct",
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            },
-            {
-                "role": "user",
-                "content": USER_PROMPT
-            }
+    request_payload = {
+        "model": "llama-3",  # Adjust to your available model name
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
         ],
-    )
-    
-    #  use first choice for recommendation (for now)
-    return completion.choices[0].message.content
-    
+        "max_tokens": 500,
+        "temperature": 0.3
+    }
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(GROQ_API_URL, json=request_payload, headers=headers) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    llama_response = result["choices"][0]["message"]["content"]
+                    return llama_response.strip()
+                else:
+                    print(f"Error: LLaMA API returned status {response.status}")
+                    return "Error during LLaMA model inference."
+        except Exception as e:
+            print(f"Error calling LLaMA API: {e}")
+            return "Error during LLaMA model inference."
+
+
 def parse_analysis(analysis: str):
     allocation = analysis[analysis.index("{")+1:analysis.index("}")].split(",")
     allocation = {
@@ -143,41 +154,74 @@ def parse_analysis(analysis: str):
 
 # Create the agent
 news_agent = Agent(name="news_agent")
+news_agent.my_state = {}
+client_address = None
 
-@news_agent.on_message(model=NewsRequest)
-async def handle_news_request(ctx: Context, sender: str, msg: NewsRequest):
+@news_agent.on_message(model=HelloMessage)
+async def register_client(ctx: Context, sender: str, msg: HelloMessage):
+    global client_address
+    client_address = sender
+    ctx.logger.info(f"Registered new client: {client_address}")
+    await ctx.send(client_address, WelcomeMessage(text="You are registered!"))
+    
+@news_agent.on_interval(period=30)
+async def handle_news_request(ctx: Context):
+    
+    if not client_address:
+        ctx.logger.info("Please say hello!")
+        return
+        
     ctx.logger.info("Checking financial news...")
     headlines = fetch_news()
 
     if not headlines:
         ctx.logger.warning("No headlines found, sending empty response.")
-        await ctx.send(sender, NewsResponse(headlines=[], analysis="No news found."))
         return
 
     ctx.logger.info("Sending headlines to LLaMA for analysis...")
     analysis = await analyze_headlines_async(headlines)
-    target_allocation = parse_analysis(analysis)
-
+    
+    if type(analysis) != str:
+        analysis = ""
+    
+    try:
+        target_allocation = parse_analysis(analysis)
+    except:
+        target_allocation = {}
+        
     if not target_allocation:
-        await ctx.send(sender, "LLaMA did not provide a valid portfolio recommendation.")
-        return
-
-    # Send recommendations and ask for confirmation
-    confirmation_message = "\nHow would you like to rebalance your portfolio?"
-    confirmation_message += "\n1. Based on the agent's recommendation?"
-    confirmation_message += "\n2. Based on the minimum variance portfolio?"
-    confirmation_message += "\n3. Based on mixed complexity, which factors in rebalancing costs?"
-    confirmation_message += "\n4. Do not rebalance."
-    confirmation_message = "\nPlease enter the number of your decision"
+        ctx.logger.info("LLaMA did not recommend specific allocations.")
+        rebalance_question = "\nWould you like to rebalance your portfolio..."
+        rebalance_question += "\n1. Based on the minimum variance portfolio?"
+        rebalance_question += "\n2. Based on mixed complexity, which factors in rebalancing costs?"
+        rebalance_question += "\n3. Do not rebalance."
+        rebalance_question += "\nPlease enter the number of your decision"
+    else:
+        ctx.logger.info("LLaMA recommends specific allocations.")
+        rebalance_question = "\nWould you like to rebalance your portfolio..."
+        rebalance_question += "\n1. Based on the agent's recommendation?"
+        rebalance_question += "\n2. Based on the minimum variance portfolio?"
+        rebalance_question += "\n3. Based on mixed complexity, which factors in rebalancing costs?"
+        rebalance_question += "\n4. Do not rebalance."
+        rebalance_question += "\nPlease enter the number of your decision"
 
     # Send response with headlines and analysis
-    await ctx.send(sender, NewsResponse(headlines=headlines, analysis=analysis))
+    response = "Today's news headlines " + "\n".join(headlines)
+    response += "\n"
     
-    # Send confirmation request
-    await ctx.send(sender, confirmation_message)
-
-    # Store the recommended allocation in memory
-    news_agent.context['target_allocation'] = target_allocation
+    if analysis != "":
+        response += "Analysis " + analysis
+        response += "\n"
+    
+    response += rebalance_question
+    ctx.logger.info(response)
+    
+    full_report = FullReport(text=response)
+    decision = await ctx.send(client_address, full_report) 
+    await ctx.send(
+        client_address, 
+        UserConfirmation(decision=decision, target_allocation=target_allocation)
+    )
 
 @news_agent.on_message(model=UserConfirmation)
 async def handle_user_confirmation(ctx: Context, sender: str, msg: UserConfirmation):
@@ -201,7 +245,7 @@ async def handle_user_confirmation(ctx: Context, sender: str, msg: UserConfirmat
         portfolio_data = pm.to_dict()    
         print(json.dumps(portfolio_data))
         
-        await ctx.send(sender, "Proceeding with portfolio rebalancing...")        
+        await ctx.send(client_address, "Proceeding with portfolio rebalancing...")        
         
         print("\nPortfolio Summary:")
         print(f"Total Value: ${portfolio_data['total_value']:,.2f}")
@@ -212,9 +256,7 @@ async def handle_user_confirmation(ctx: Context, sender: str, msg: UserConfirmat
         
     else:
         ctx.logger.info("User declined to rebalance.")
-        await ctx.send(sender, "Rebalancing canceled. Let me know if you need anything else.")
+        await ctx.send(client_address, "Rebalancing canceled. Let me know if you need anything else.")
 
 if __name__ == "__main__":
     news_agent.run()
-
-
