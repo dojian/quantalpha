@@ -19,7 +19,7 @@ Current Portfolio Context:
     : ""
 
   const result = await streamText({
-    model: groq("llama-3.1-70b-versatile"),
+    model: groq("meta-llama/llama-4-maverick-17b-128e-instruct"),
     system: `You are an expert AI Portfolio Manager for QuantAlpha, powered by Python analytics and Groq's Llama model.
 
 ${portfolioContext}
