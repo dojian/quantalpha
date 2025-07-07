@@ -9,7 +9,7 @@ import aiohttp
 # Replace with your NewsAPI key
 NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-GROQ_API_URL = os.environ.get("NEWS_API_KEY")
+GROQ_API_URL = os.environ.get("GROQ_API_URL")
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -112,7 +112,7 @@ async def analyze_headlines_async(headlines):
     )
 
     request_payload = {
-        "model": "meta-llama/Llama-3.3-70B-Instruct"
+        "model": "meta-llama/Llama-3.3-70B-Instruct",
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
