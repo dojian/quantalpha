@@ -1,10 +1,13 @@
-import os
 import json
 from typing import Dict, List, Any
 from dataclasses import dataclass
 from datetime import datetime
 import numpy as np
-import pandas as pd
+
+from pyomo.environ import ConcreteModel, Var, NonNegativeReals
+from pyomo.environ import Objective, Constraint, SolverFactory
+from pyomo.mpec import Complementarity, complements
+from numpy.linalg import inv
 
 @dataclass
 class Asset:
@@ -21,6 +24,7 @@ class Asset:
 class Portfolio:
     total_value: float
     assets: List[Asset]
+    covar_matrix: List[List[float]]
     risk_profile: str
     last_updated: datetime
 
@@ -43,10 +47,23 @@ class PortfolioManager:
         
         total_value = sum(asset.value for asset in assets)
         
+        #  initalize covariance matrix
+        covar_matrix = [
+            [0.025, 0.018, 0.017, 0.005, -0.002, 0.010, 0.009, 0.000],
+            [0.018, 0.030, 0.016, 0.004, -0.003, 0.011, 0.010, 0.000],
+            [0.017, 0.016, 0.028, 0.004, -0.002, 0.009, 0.008, 0.000],
+            [0.005, 0.004, 0.004, 0.150, 0.000, 0.006, 0.005, 0.000],
+            [-0.002, -0.003, -0.002, 0.000, 0.020, 0.000, 0.000, 0.000],
+            [0.010, 0.011, 0.009, 0.006, 0.000, 0.022, 0.013, 0.000],
+            [0.009, 0.010, 0.008, 0.005, 0.000, 0.013, 0.025, 0.000],
+            [0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000]
+        ]
+        
         return Portfolio(
             total_value=total_value,
             assets=assets,
             risk_profile="moderate",
+            covar_matrix=covar_matrix,
             last_updated=datetime.now()
         )
     
@@ -91,6 +108,56 @@ class PortfolioManager:
             "num_assets": len(self.portfolio.assets)
         }
     
+    def run_mcp_portfolio_optimization(self, decision_input):
+        """
+        """
+        # Setup model
+        model = ConcreteModel()
+        
+        assets = self.portfolio.assets
+        cov_matrix = self.portfolio.covar_matrix
+
+        model.w = Var(assets, bounds=(0, 1))
+        model.cost = Var(assets, within=NonNegativeReals)        
+        
+        # Objective: Minimize variance + transaction cost penalty
+        model.obj = Objective(
+            expr=sum(
+                cov_matrix[i, j] 
+                * model.w[i] 
+                * model.w[j] 
+                for i in assets for j in assets
+            ) + sum(model.cost[i] for i in assets)
+        )
+        
+        
+        # Budget constraint
+        model.budget = Constraint(expr=sum(model.w[i] for i in assets) == 1)
+        
+        # Complementarity conditions: trade OR marginal cost is zero
+        model.comp = Complementarity(assets, rule=lambda m, i: complements(model.w[i] >= 0, model.cost[i] >= 0))
+        
+        solver = SolverFactory('path')
+        result = solver.solve(model, tee=False)
+        
+        target_allocation = {i: model.w[i].value for i in assets}
+
+        return self.rebalance_portfolio(target_allocation)
+
+    def rebalance_portfolio_mvo(self) -> Dict[str, Any]:
+        """Rebalance portfolio to target allocation"""
+        cov_matrix = self.portfolio.covar_matrix
+        cov_matrix = np.array(cov_matrix)
+        num_assets = cov_matrix.shape[0]
+        ones = np.ones(num_assets)
+    
+        # Calculate weights: w = Σ⁻¹1 / (1'Σ⁻¹1)
+        inv_cov = inv(cov_matrix)
+        target_allocation = inv_cov @ ones
+        target_allocation /= ones @ inv_cov @ ones
+    
+        return self.rebalance_portfolio(target_allocation)
+    
     def rebalance_portfolio(self, target_allocation: Dict[str, float]) -> Dict[str, Any]:
         """Rebalance portfolio to target allocation"""
         current_allocation = self.get_asset_allocation()
@@ -117,6 +184,7 @@ class PortfolioManager:
             "target_allocation": target_allocation
         }
     
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert portfolio to dictionary for JSON serialization"""
         return {
