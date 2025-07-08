@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const { stdout } = await execAsync("python scripts/portfolio_manager.py")
 //    const portfolioData = JSON.parse(stdout.split("Portfolio Summary:")[0])
-      const portfolioData = JSON.parse(stdout)
+      const portfolioData = "this is a test"
     
     return NextResponse.json(portfolioData)
   } catch (error) {
