@@ -2,6 +2,11 @@
 
 AI-powered portfolio management with real-time market analysis using Python analytics and Groq's Llama models.
 
+## 👥 Our Team
+
+| [![Haris Mughal](https://github.com/haris-mughal.png?size=100)](https://github.com/haris-mughal)<br>Haris Mughal | [![An Jian](https://github.com/dojian.png?size=100)](https://github.com/dojian)<br>An Jian | [![Hamza Imran](https://github.com/Hamzacancode.png?size=100)](https://github.com/Hamzacancode)<br>Hamza Imran | [![Talha Asif](https://github.com/Talhaasif7.png?size=100)](https://github.com/Talhaasif7)<br>Talha Asif | [![Arslan Saeed](https://github.com/arslansaeed.png?size=100)](https://github.com/arslansaeed)<br>Arslan Saeed | [![Justin Sterling](https://github.com/jps245.png?size=100)](https://github.com/jps245)<br>Justin Sterling |
+|---|---|---|---|---|---|
+
 ## 🚀 Features
 
 - **Python-Powered Analytics**: Advanced portfolio calculations using NumPy and Pandas
