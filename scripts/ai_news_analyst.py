@@ -235,12 +235,14 @@ async def handle_user_confirmation(ctx: Context, sender: str, msg: UserConfirmat
         
         if decision == "1":
             pm.rebalance_portfolio(msg.target_allocation)
-        
+
+        #  JPS - had to revert back to old portfolio mgr, mvo not in class
         elif decision == "2":
-            pm.rebalance_portfolio_mvo()
+            pass
         
+        #  JPS - had to revert back to old portfolio mgr, mcp not in class
         elif decision == "3":
-            pm.rebalance_portfolio_mcp()
+            pass
             
         portfolio_data = pm.to_dict()    
         print(json.dumps(portfolio_data))
