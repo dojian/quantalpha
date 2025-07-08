@@ -150,9 +150,9 @@ if __name__ == "__main__":
     print(json.dumps(portfolio_data))
 
     # 2️⃣  Human-readable summary follows
-    print("Portfolio Summary:")
-    print(f"Total Value: ${portfolio_data['total_value']:,.2f}")
-    print(f"Number of Assets: {len(portfolio_data['assets'])}")
-    print(f"Asset Allocation: {portfolio_data['asset_allocation']}")
-    print(f"Geographic Allocation: {portfolio_data['geographic_allocation']}")
-    print(f"Portfolio Metrics: {portfolio_data['metrics']}")
+    #print("Portfolio Summary:")
+    #print(f"Total Value: ${portfolio_data['total_value']:,.2f}")
+    #print(f"Number of Assets: {len(portfolio_data['assets'])}")
+    #print(f"Asset Allocation: {portfolio_data['asset_allocation']}")
+    #print(f"Geographic Allocation: {portfolio_data['geographic_allocation']}")
+    #print(f"Portfolio Metrics: {portfolio_data['metrics']}")
