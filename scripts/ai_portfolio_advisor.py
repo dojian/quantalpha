@@ -5,6 +5,8 @@ from groq import Groq
 from dotenv import load_dotenv
 from scripts.portfolio_manager import PortfolioManager
 
+#test
+
 # Load environment variables from .env file
 load_dotenv()
 
