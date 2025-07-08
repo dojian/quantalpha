@@ -4,8 +4,9 @@ AI-powered portfolio management with real-time market analysis using Python anal
 
 ## 👥 Our Team
 
-| [![Haris Mughal](https://github.com/haris-mughal.png?size=100)](https://github.com/haris-mughal)<br>Haris Mughal | [![An Jian](https://github.com/dojian.png?size=100)](https://github.com/dojian)<br>An Jian | [![Hamza Imran](https://github.com/Hamzacancode.png?size=100)](https://github.com/Hamzacancode)<br>Hamza Imran | [![Talha Asif](https://github.com/Talhaasif7.png?size=100)](https://github.com/Talhaasif7)<br>Talha Asif | [![Arslan Saeed](https://github.com/arslansaeed.png?size=100)](https://github.com/arslansaeed)<br>Arslan Saeed | [![Justin Sterling](https://github.com/jps245.png?size=100)](https://github.com/jps245)<br>Justin Sterling |
+| <img src="https://github.com/haris-mughal.png" width="80"/> <br> Haris Mughal | <img src="https://github.com/dojian.png" width="80"/> <br> An Jian | <img src="https://github.com/Hamzacancode.png" width="80"/> <br> Hamza Imran | <img src="https://github.com/Talhaasif7.png" width="80"/> <br> Talha Asif | <img src="https://github.com/arslansaeed.png" width="80"/> <br> Arslan Saeed | <img src="https://github.com/jps245.png" width="80"/> <br> Justin Sterling |
 |---|---|---|---|---|---|
+
 
 ## 🚀 Features
 
