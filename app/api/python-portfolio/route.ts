@@ -6,7 +6,7 @@ const execAsync = promisify(exec)
 
 export async function GET() {
   try {
-    const { stdout } = await execAsync("python scripts/portfolio_manager.py")
+ //   const { stdout } = await execAsync("python scripts/portfolio_manager.py")
 //    const portfolioData = JSON.parse(stdout.split("Portfolio Summary:")[0])
       const portfolioData = "this is a test"
     
