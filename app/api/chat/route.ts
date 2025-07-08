@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   const { messages } = await req.json()
 
   const result = await streamText({
-    model: groq("meta-llama/llama-4-maverick-17b-128e-instruct"),
+    model: groq("llama-3.1-70b-versatile"),
     system: `You are an expert AI Portfolio Manager for QuantAlpha, a sophisticated investment platform. You have access to real-time market data, earnings reports, and financial analysis.
 
 Your role:

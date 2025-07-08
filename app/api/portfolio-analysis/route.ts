@@ -24,7 +24,7 @@ Keep response under 200 words and focus on actionable insights.`
 
   try {
     const { text } = await generateText({
-      model: groq("meta-llama/llama-4-maverick-17b-128e-instruct"),
+      model: groq("llama-3.1-70b-versatile"),
       system: systemPrompt,
       prompt: `Analyze this portfolio data: ${JSON.stringify(portfolioData)}`,
       maxTokens: 500,
